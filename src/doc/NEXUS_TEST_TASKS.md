@@ -12,8 +12,8 @@ Example: `- [x] security/tls.js → test/security/tls.test.js` — done by Ashis
 |---|---|---|---|---|
 | 1 | `config.js` | `test/config.test.js` | **Saikat** | [X] |
 | 2 | `security/tls.js` | `test/security/tls.test.js` | **Ashish** | [X], Aug 29, 2026 |
-| 3 | `observability/logger.js` | `test/observability/logger.test.js` | **Saikat** | [ ] |
-| 4 | `observability/metrics.js` | `test/observability/metrics.test.js` | **Saikat** | [ ] |
+| 3 | `observability/logger.js` | `test/observability/logger.test.js` | **Saikat** | [X] |
+| 4 | `observability/metrics.js` | `test/observability/metrics.test.js` | **Saikat** | [X] |
 | 5 | `routing/router.js` | `test/routing/router.test.js` | **Kanchan** | [X] |
 | 6 | `routing/loadbalancer.js` | `test/routing/loadbalancer.test.js` | **Kanchan** | [X] |
 | 7 | `reliability/healthcheck.js` | `test/reliability/healthcheck.test.js` | **Ashish** | [X] |
@@ -23,7 +23,7 @@ Example: `- [x] security/tls.js → test/security/tls.test.js` — done by Ashis
 | 11 | `observability/dashboard.js` | `test/observability/dashboard.test.js` | **Biyas** | [ ] |
 | 12 | `core/pipeline.js` | `test/core/pipeline.test.js` *(integration — mock/stub #2–11)* | **Kanchan** | [ ] |
 | 13 | `core/server.js` | `test/core/server.test.js` *(real server, hit via `http.request`)* | **Kanchan** | [ ] |
-| 14 | `cli.js` | `test/cli.test.js` *(argv parsing, config load path)* | **Saikat** | [ ] |
+| 14 | `cli.js` | `test/cli.test.js` *(argv parsing, config load path)* | **Saikat** | [X] |
 | 15 | `examples/backend-echo.js` | *skip — throwaway demo fixture, just confirm it runs* | **Biyas** | [ ] |
 | 16 | `scripts/start.js` | *skip — orchestrator script, one-time smoke test* | **Biyas** | [ ] |
 | 17 | `public/index.html` | *no test — verify manually against dashboard SSE stream* | **Biyas** | [ ] |

@@ -13,8 +13,8 @@ Format per hackathon rule: `Normally: <package> → Instead: <stdlib>`
 |---|--------|----------|--------------------|--------------------------------------------------|
 | 1 | `config.js` | `dotenv` / `convict` / `joi` | `node:fs.readFileSync` + `JSON.parse` + hand-rolled validator | _____ |
 | 2 | `security/tls.js` | `mkcert` / `selfsigned` | `node:child_process.execSync('openssl ...')` + `node:https` | _____ |
-| 3 | `observability/logger.js` | `winston` / `pino` | Hand-rolled leveled logger over `process.stdout.write` (+ `node:fs` for file target) | _____ |
-| 4 | `observability/metrics.js` | `prom-client` | Plain in-memory counters (`Map`/object) + manual percentile calc | _____ |
+| 3 | `observability/logger.js` | `winston` / `pino` | Hand-rolled leveled logger over `process.stdout.write` (+ `node:fs` for file target) | `createLogger()` gates messages by level (debug/info/warn/error), `logRequest()` emits the stable `method path status durationMs` line other modules assert on, rotation logic reuses wal.js's size-check + retain-N-files approach. |
+| 4 | `observability/metrics.js` | `prom-client` | Plain in-memory counters (`Map`/object) + manual percentile calc | `recordRequest()` updates totals + per-route/per-backend Maps on every call; `snapshot()` sorts a rolling latency window to compute avg/p50/p95/p99 on demand, no external calc library. |
 | 5 | `routing/router.js` | `express` / `find-my-way` | Hand-rolled matcher over `node:url` | _____ |
 | 6 | `routing/loadbalancer.js` | Cloud LB / `http-proxy` upstream logic | Hand-rolled round-robin index picker | _____ |
 | 7 | `reliability/healthcheck.js` | `@godaddy/terminus` (or similar) | `node:http`/`node:https` GET on `setInterval` | _____ |
@@ -24,7 +24,7 @@ Format per hackathon rule: `Normally: <package> → Instead: <stdlib>`
 | 11 | `observability/dashboard.js` | `socket.io` | Raw SSE via `res.write` over `node:http` | _____ |
 | 12 | `core/pipeline.js` | `express` / `koa` middleware chain | Hand-rolled ordered function-array executor | _____ |
 | 13 | `core/server.js` | `pm2` / framework clustering | `node:http` + `node:https` + `node:cluster` | _____ |
-| 14 | `cli.js` | `commander` / `yargs` | Hand-rolled `process.argv` parser | _____ |
+| 14 | `cli.js` | `commander` / `yargs` | Hand-rolled `process.argv` parser | `parseArgs()` hand-parses `process.argv` for `--config/-c`, `-t/--test`, and `-s reload`; `main()` is dependency-injected so it runs under `node:test` without a real server. |
 
 > Fill "Actual detail" col right after finishing each file — real func/API name used, not just plan. Ex row 1: `validateConfig()` checks `listen`/`backends`/`routes`, throws named-missing-key error.
 
