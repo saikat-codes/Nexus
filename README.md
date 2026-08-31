@@ -9,15 +9,41 @@ Track C (Web & Network).
 
 ---
 
-## Team
+### 1️⃣ Clone the Repository
 
-- _____ (role: _____)
-- _____ (role: _____)
-- _____ (role: _____)
+Choose whichever method fits your workflow:
 
-**Repo:** _____ (must be public at submission time)
-**Demo video (5 min):** _____
+**HTTPS**
+```bash
+git clone https://github.com/kanchan-nath/Nexus.git
+```
 
+**SSH**
+```bash
+git clone git@github.com:kanchan-nath/Nexus.git
+```
+
+**GitHub CLI**
+```bash
+gh repo clone kanchan-nath/Nexus
+```
+
+Then move into the project directory:
+```bash
+cd Nexus
+
+```
+
+One time command:
+```bash
+node src/scripts/start.js
+```
+
+To verify:
+```bash
+1. curl http://localhost:8080
+2. curl -k https://localhost:8443
+```
 ---
 
 ## Track & Bonus Challenges Attempted
@@ -26,10 +52,10 @@ Track C (Web & Network).
 
 | Bonus | Attempted? | Notes |
 |---|---|---|
-| Single File (+5) | _____ | |
-| Reproducible Build (+5) | _____ | build twice, publish both hashes |
-| Package Killer (+3) | _____ | see `STDLIB.md` → Package Killer section |
-| STDLIB Log (+3) | Yes | 14 substitutions documented, see `STDLIB.md` |
+| Single File (+5) | No | Multi-module project by design — a single-file reverse proxy with this feature set wasn't the goal. |
+| Reproducible Build (+5) | No | `build.sh` exists but is currently empty; there's no bundling step since it's plain Node source, so this would need to be a source-tree hash script rather than a binary build. Not implemented yet. |
+| Package Killer (+3) | Yes | `security/ratelimiter.js` — see `STDLIB.md` → Package Killer section for the write-up. |
+| STDLIB Log (+3) | Yes | 14 substitutions documented with actual function/API names used, see `STDLIB.md`. |
 
 ---
 
@@ -99,47 +125,58 @@ Full per-file build spec (including all stretch-tier items) lives in
                  wal.js (durability, independent of logger.js)
 ```
 
-Write order followed dependency order (config → tls → logger → metrics → router →
-loadbalancer → healthcheck → wal → ratelimiter → auth → dashboard → pipeline → server → cli).
+Write order followed dependency order: config → tls → logger → metrics → router →
+loadbalancer → healthcheck → wal → ratelimiter → auth → dashboard → pipeline → server → cli.
 
 ---
 
 ## Zero-Dependency Proof
 
-- `package.json` → `dependencies: {}` (empty).
-- No `node_modules` third-party runtime code — only `node:*` core modules imported anywhere
-  under `src/`.
-- Dev-only: `node:test` (Node's built-in test runner) — no external framework.
-- Full package → stdlib substitution table: see [`STDLIB.md`](./STDLIB.md).
+- `package.json` → `"dependencies"` key is absent entirely (and there's no `devDependencies`
+  either).
+- No third-party runtime code anywhere under `src/` — only `node:*` core modules imported.
+- Dev-only: `node:test` (Node's built-in test runner) — no external framework, no linter, no
+  coverage tool.
+- Full package → stdlib substitution table with actual API names used: see
+  [`STDLIB.md`](./STDLIB.md).
 
 Verify yourself:
 
 ```bash
-cat package.json | grep -A2 '"dependencies"'
-grep -rn "require(" src/ | grep -v "node:"   # should return nothing
+grep -A3 '"dependencies"\|"devDependencies"' package.json   # both absent
+grep -rn "from '" src/ --include=*.js | grep -v "node:" | grep -v "^src/test" | grep -v "\.\./\|\./"
+# ^ any bare (non-relative, non-node:) import would show up here — should return nothing
 ```
 
 ---
 
 ## Requirements
 
-- Node.js **_____** or later (state your minimum tested version)
+- Node.js **18 or later** (CI runs against Node 24 — see `.github/workflows/ci.yml`)
 - `openssl` on `PATH` (used once, at first run, to generate a self-signed dev cert)
 
 ---
 
-## Build & Run — One Command
+## Build & Run
+
+There is no build step — it's plain ESM Node source, run directly.
 
 ```bash
-git clone _____
-cd nexus
-npm start
+git clone https://github.com/kanchan-nath/Nexus.git
+cd Nexus
+node src/scripts/start.js
 ```
 
-`npm start` boots the demo backend(s) (`src/examples/backend-echo.js`) and the gateway
-together via `src/scripts/start.js`, so there's nothing else to configure to see it working.
+`src/scripts/start.js` boots the demo backend(s) (`src/examples/backend-echo.js`) on the ports
+your `nexus.config.json` points at, then starts the gateway, so there's nothing else to
+configure to see it working.
 
-To run the gateway standalone against your own backends:
+> **Known gap:** `package.json` doesn't currently declare a `"start"` script, so `npm start`
+> won't work yet even though `src/scripts/ci-smoke-test.js` assumes it does. Add
+> `"start": "node src/scripts/start.js"` to `package.json`'s `scripts` block to fix this before
+> submission — until then, run the command above directly.
+
+To run the gateway standalone against your own backends (no demo backend spawned):
 
 ```bash
 node src/cli.js start --config ./nexus.config.json
@@ -148,58 +185,82 @@ node src/cli.js start --config ./nexus.config.json
 Validate config without starting anything:
 
 ```bash
-node src/cli.js start --config ./nexus.config.json -t
+node src/cli.js -t --config ./nexus.config.json
 ```
 
-Dashboard: open `src/public/index.html` (or `http://localhost:_____/nexus` — fill in your
-configured dashboard path) while the gateway is running.
+Dashboard: with the gateway running, open `http://localhost:8080/nexus/dashboard` (or whatever
+`dashboard.path` is set to in your config).
 
 ---
 
 ## Configuration
 
-Example `nexus.config.json`:
+Real shape, from `nexus.config.json` (`backends` is an object keyed by pool name, each value an
+array of `{ url, weight }`):
 
 ```json
 {
-  "listen": { "http": _____, "https": _____ },
-  "backends": [
-    { "name": "echo-1", "url": "http://localhost:_____", "weight": 1 }
-  ],
+  "listen": { "http": 8080, "https": 8443 },
+  "backends": {
+    "web": [
+      { "url": "http://localhost:9001", "weight": 1 },
+      { "url": "http://localhost:9002", "weight": 1 }
+    ]
+  },
   "routes": [
-    { "path": "/api", "backend": "echo-1", "auth": false }
-  ]
+    { "path": "/", "backend": "web" },
+    { "path": "/api", "backend": "web" }
+  ],
+  "healthcheck": { "path": "/health", "intervalMs": 5000, "unhealthyThreshold": 3, "healthyThreshold": 2 },
+  "ratelimit": { "windowMs": 60000, "maxRequests": 100 },
+  "auth": { "headerName": "X-API-Key", "keys": ["dev-key-123"], "requiredByDefault": false },
+  "tls": { "certPath": "./certs/cert.pem", "keyPath": "./certs/key.pem" },
+  "logging": { "level": "info", "format": "combined" },
+  "wal": { "enabled": true, "path": "./data/wal", "flushIntervalMs": 1000, "maxFileSizeBytes": 10485760, "retainFiles": 5 },
+  "dashboard": { "enabled": true, "path": "/nexus/dashboard", "pushIntervalMs": 2000 }
 }
 ```
 
-Required top-level keys: `listen`, `backends`, `routes`. Missing keys fail fast with the exact
-key name at startup — see `config.js`.
+Required top-level keys: `listen`, `backends`, `routes`. A route's `backend` must reference a
+key that exists in `backends`. Missing/invalid keys fail fast with the exact key name at
+startup — see `validateConfig()` in `src/config.js`. Every other section (`healthcheck`,
+`ratelimit`, `auth`, `tls`, `logging`, `wal`, `dashboard`) is optional and gets sane defaults
+merged in.
 
 ---
 
 ## Testing
 
 ```bash
-node --test
+npm test
+# equivalent to:
+node --test --test-reporter=spec --test-reporter-destination=stdout "src/test/**/*.test.js"
 ```
 
-Tests live under `_____` (state your test directory) and use `node:test` +
-`node:assert` only. Covers: _____ (list what's actually covered — router matching,
-load-balancer selection, rate-limiter windowing, etc).
+Tests live under `src/test/`, mirroring the `src/` module structure (e.g.
+`src/test/security/auth.test.js` tests `src/security/auth.js`). 14 test files, 200+ individual
+`node:test` cases, `node:assert/strict` only — no external test framework.
+
+Covers: config validation and defaulting, TLS cert auto-gen and SNI, logger level filtering and
+rotation, metrics counters and percentiles, router exact/prefix/host/regex matching and
+longest-prefix-wins, load-balancer strategies (round-robin/weighted/least-conn/ip-hash) and
+health-awareness, health-check flap resistance and passive failure reporting, WAL batching/
+rotation/replay, rate-limiter token-bucket behavior and `Retry-After`, auth API-key and HMAC
+token verification (including expiry), dashboard SSE diffing, pipeline phase ordering and the
+"metrics fires on every branch" regression case, server boot/shutdown, and CLI argument parsing.
 
 ---
 
-## Reproducible Build (if attempting +5 bonus)
+## Reproducible Build (not attempted — see `build.sh`)
+
+`build.sh` is currently an empty file. There's no compilation/bundling step for this project
+(it's plain ESM run directly by Node), so a reproducible-build script here would mean hashing
+the source tree deterministically rather than a compiled binary, e.g.:
 
 ```bash
-# Build 1
-_____
-sha256sum _____ > build1.hash
-
-# Build 2 (clean, from scratch)
-_____
-sha256sum _____ > build2.hash
-
+# Not yet implemented — sketch of what this would look like:
+find src -type f -name '*.js' | sort | xargs cat | sha256sum > build1.hash
+find src -type f -name '*.js' | sort | xargs cat | sha256sum > build2.hash
 diff build1.hash build2.hash   # should be empty
 ```
 
@@ -208,14 +269,21 @@ diff build1.hash build2.hash   # should be empty
 ## What's Explicitly Not Built (Tier 3 / out of scope)
 
 OCSP stapling, mutual TLS, HTTP/2 via ALPN, full nginx directive/include config grammar,
-distributed rate limiting across processes, full PCRE regex routing, full JWT
-claims/issuer/audience verification, OAuth2 delegated auth, zero-downtime binary upgrade,
-historical time-series persistence, log compaction, pluggable third-party middleware
-registration.
+distributed rate limiting across multiple gateway processes, full PCRE regex routing (only a JS
+`RegExp` subset is supported), full JWT claims/issuer/audience verification, OAuth2 delegated
+auth, zero-downtime binary upgrade, historical time-series persistence across restarts, log
+compaction, pluggable third-party middleware registration.
 
-Scope reasoning: these either require a shared external store, a spec far bigger than a
-72-hour build, or genuinely don't fit "reimplement with stdlib" (e.g. OCSP needs a CA
+Scope reasoning: these either require a shared external store, a spec far bigger than the
+build window, or genuinely don't fit "reimplement with stdlib" (e.g. OCSP needs a CA
 relationship, not just more code).
+
+### Also incomplete (attempted stretch goals, not scope-outs)
+
+See `STDLIB.md`'s "Stretch items that were attempted in spec but not finished in code" section
+for the honest list — `node:cluster` multi-process, config hot-reload, config-driven phase
+order, per-route rate-limit wiring, the missing `npm start` script, and the reproducible build
+script above.
 
 ---
 
